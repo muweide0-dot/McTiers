@@ -44,11 +44,11 @@ function requireApiKey(expectedKey: string) {
   };
 }
 
-function parseOrRespond<T>(
-  schema: z.ZodType<T>,
+function parseOrRespond<TSchema extends z.ZodTypeAny>(
+  schema: TSchema,
   value: unknown,
   res: Response,
-): T | undefined {
+): z.infer<TSchema> | undefined {
   const parsed = schema.safeParse(value);
   if (!parsed.success) {
     res.status(400).json({
