@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Region {
+  EU
+  NA
+  AS
+  AU
+  ME
+}
+
+enum Tier {
+  LT5
+  HT5
+  LT4
+  HT4
+  LT3
+  HT3
+  LT2
+  HT2
+  LT1
+  HT1
+  N_A @map("N/A")
+}
+
+enum TestSessionStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
+model Player {
+  id             String        @id @default(cuid())
+  discordUserId  String        @unique @map("discord_user_id")
+  username       String
+  region         Region
+  currentTier    Tier          @default(N_A) @map("current_tier")
+  tierHistory    TierHistory[]
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  @@index([region, currentTier])
+  @@map("players")
+}
+
+model TestSession {
+  id                   String            @id @default(cuid())
+  candidateDiscordId   String            @map("candidate_discord_id")
+  candidateUsername    String            @map("candidate_username")
+  region               Region
+  previousTier         Tier              @map("previous_tier")
+  assignedTier         Tier?             @map("assigned_tier")
+  status               TestSessionStatus @default(OPEN)
+  openedByDiscordId    String            @map("opened_by_discord_id")
+  completedByDiscordId String?           @map("completed_by_discord_id")
+  note                 String?           @db.VarChar(1000)
+  createdAt            DateTime          @default(now()) @map("created_at")
+  completedAt          DateTime?         @map("completed_at")
+  history              TierHistory?
+
+  @@index([status, createdAt])
+  @@index([candidateDiscordId, createdAt])
+  @@map("test_sessions")
+}
+
+model TierHistory {
+  id                  String       @id @default(cuid())
+  playerId            String       @map("player_id")
+  previousTier        Tier?        @map("previous_tier")
+  newTier             Tier         @map("new_tier")
+  region              Region
+  changedByDiscordId  String       @map("changed_by_discord_id")
+  testSessionId       String?      @unique @map("test_session_id")
+  reason              String?      @db.VarChar(1000)
+  createdAt           DateTime     @default(now()) @map("created_at")
+  player              Player       @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  testSession         TestSession? @relation(fields: [testSessionId], references: [id], onDelete: SetNull)
+
+  @@index([playerId, createdAt])
+  @@map("tier_history")
+}
